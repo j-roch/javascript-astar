@@ -48,29 +48,32 @@ var astar = {
   search: function(graph, start, end, options) {
     graph.cleanDirty();
     options = options || {};
-    var heuristic = options.heuristic || astar.heuristics.manhattan;
-    var closest = options.closest || false;
+    var heuristic = options.heuristic || astar.heuristics.manhattan,
+      closest = options.closest || false;
 
-    var openHeap = getHeap();
-    var closestNode = start; // set the start node to be the closest if required
-
+    var openHeap = getHeap(),
+      closestNode = start; // set the start node to be the closest if required
+    var closedList = [];
     start.h = heuristic(start, end);
-    graph.markDirty(start);
 
     openHeap.push(start);
 
-    while (openHeap.size() > 0) {
+    while(openHeap.size() > 0) {
 
       // Grab the lowest f(x) to process next.  Heap keeps this sorted for us.
       var currentNode = openHeap.pop();
 
       // End case -- result has been found, return the traced path.
-      if (currentNode === end) {
+      if(currentNode === end) {
+        while(closedList.length > 0) {
+          closedList.pop().closed = false;
+        }
         return pathTo(currentNode);
       }
 
       // Normal case -- move currentNode from open to closed, process each of its neighbors.
       currentNode.closed = true;
+      closedList.push(currentNode);
 
       // Find all neighbors for the current node.
       var neighbors = graph.neighbors(currentNode);
@@ -85,8 +88,8 @@ var astar = {
 
         // The g score is the shortest distance from start to current node.
         // We need to check if the path we have arrived at this neighbor is the shortest one we have seen yet.
-        var gScore = currentNode.g + neighbor.getCost(currentNode);
-        var beenVisited = neighbor.visited;
+        var gScore = currentNode.g + neighbor.getCost(currentNode),
+          beenVisited = neighbor.visited;
 
         if (!beenVisited || gScore < neighbor.g) {
 
@@ -108,12 +111,16 @@ var astar = {
           if (!beenVisited) {
             // Pushing to heap will put it in proper place based on the 'f' value.
             openHeap.push(neighbor);
-          } else {
+          }
+          else {
             // Already seen the node, but since it has been rescored we need to reorder it in the heap
             openHeap.rescoreElement(neighbor);
           }
         }
       }
+    }
+    while(closedList.length > 0) {
+      closedList.pop().closed = false;
     }
 
     if (closest) {
